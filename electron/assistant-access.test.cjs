@@ -155,6 +155,16 @@ const TASKS = [
   { id: 't2', title: 'Sub', notes: '', isDone: true, parentId: 't1', tagIds: [] },
 ];
 
+// The task route still serves tasks of archived projects; /projects lists only
+// active ones.
+const ARCHIVED_PROJECT_TASK = {
+  id: 't-archived',
+  title: 'Old',
+  isDone: false,
+  projectId: 'p-archived',
+  tagIds: [],
+};
+
 const fakeForward = (overrides = {}) => {
   const calls = [];
   const forward = async (request) => {
@@ -167,6 +177,12 @@ const fakeForward = (overrides = {}) => {
     }
     if (request.path === '/tasks/t1') {
       return { status: 200, body: { ok: true, data: TASKS[0] } };
+    }
+    if (request.path === '/tasks/t-archived') {
+      return { status: 200, body: { ok: true, data: ARCHIVED_PROJECT_TASK } };
+    }
+    if (request.path === '/projects') {
+      return { status: 200, body: { ok: true, data: [{ id: 'p1', title: 'Work' }] } };
     }
     return {
       status: 404,
@@ -262,6 +278,46 @@ test('get_task only returns notes with the notes scope', async () => {
   );
   assert.equal(withNotes.structuredContent.task.notes, 'SECRET NOTES');
   assert.equal(withNotes.structuredContent.task.notesTruncated, false);
+});
+
+test('get_task hides tasks of archived projects, like list_tasks', async () => {
+  const { forward } = fakeForward();
+  const result = await tools.runTool(
+    'get_task',
+    { id: 't-archived' },
+    () => READ,
+    forward,
+  );
+  assert.equal(result.isError, true);
+  assert.match(result.content[0].text, /^TASK_NOT_FOUND/);
+  assert.doesNotMatch(JSON.stringify(result), /Old/);
+});
+
+test('get_task fails closed when the project list cannot be read', async () => {
+  const { forward } = fakeForward({
+    '/projects': () => ({
+      status: 500,
+      body: { ok: false, error: { code: 'INTERNAL_ERROR', message: 'echo' } },
+    }),
+  });
+  const result = await tools.runTool('get_task', { id: 't1' }, () => READ, forward);
+  assert.equal(result.isError, true);
+  assert.doesNotMatch(JSON.stringify(result), /Write report|echo/);
+});
+
+test('get_task skips the project check for a task without a project', async () => {
+  const { forward, calls } = fakeForward({
+    '/tasks/t1': () => ({
+      status: 200,
+      body: { ok: true, data: { ...TASKS[0], projectId: undefined } },
+    }),
+  });
+  const result = await tools.runTool('get_task', { id: 't1' }, () => READ, forward);
+  assert.equal(result.structuredContent.task.id, 't1');
+  assert.deepEqual(
+    calls.map((c) => c.path),
+    ['/tasks/t1'],
+  );
 });
 
 test('renderer errors never leak their message', async () => {

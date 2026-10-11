@@ -212,6 +212,31 @@ const forwardSafely = async (
 const isToolResult = (value: RendererReply | McpToolResult): value is McpToolResult =>
   'content' in value;
 
+/**
+ * The task route still serves tasks of archived projects, which the app and
+ * list_tasks hide; /projects lists only active ones. Unlike list_tasks this
+ * also hides a task whose project no longer exists — invalid state, and failing
+ * closed costs nothing.
+ */
+const failUnlessProjectActive = async (
+  forward: ForwardToRenderer,
+  projectId: unknown,
+): Promise<McpToolResult | undefined> => {
+  if (typeof projectId !== 'string') {
+    return undefined;
+  }
+  const reply = await forwardSafely(forward, { method: 'GET', path: '/projects' });
+  if (isToolResult(reply)) {
+    return reply;
+  }
+  if (!reply.body.ok || !Array.isArray(reply.body.data)) {
+    return failFromRenderer(reply);
+  }
+  return reply.body.data.some((p) => isRecord(p) && p.id === projectId)
+    ? undefined
+    : fail('TASK_NOT_FOUND', RENDERER_ERRORS.TASK_NOT_FOUND);
+};
+
 // --- tools -----------------------------------------------------------------------
 
 const getStatus: ToolSpec = {
@@ -367,6 +392,10 @@ const getTask: ToolSpec = {
       return failFromRenderer(reply);
     }
     const source = reply.body.data;
+    const archived = await failUnlessProjectActive(forward, source.projectId);
+    if (archived) {
+      return archived;
+    }
     const task: Record<string, unknown> = {
       ...toTaskSummary(source),
       subTaskIds: Array.isArray(source.subTaskIds) ? source.subTaskIds : [],

@@ -2733,7 +2733,7 @@
       "LOCAL_REST_API_TOKEN_REGENERATE_ERROR": "Could not save the new access token. The previous token is still valid.",
       "LOCAL_REST_API_TOGGLE_ERROR": "Could not save the local REST API setting.",
       "LOCAL_REST_API_STATUS_LISTENING": "Running at {{url}}",
-      "LOCAL_REST_API_STATUS_PORT_IN_USE": "Not running: port {{port}} is used by another program. Free it, then switch the API off and on again.",
+      "LOCAL_REST_API_STATUS_PORT_IN_USE": "Not running: port {{port}} is used by another program. Free it, then switch this off and on again.",
       "LOCAL_REST_API_STATUS_PERMISSION_DENIED": "Not running: this installation is not allowed to accept local connections.",
       "LOCAL_REST_API_STATUS_ERROR": "Not running: the API could not start. The app log has details.",
       "IS_ASSISTANT_ACCESS_ENABLED": "Enable assistant access (MCP, desktop only)",
