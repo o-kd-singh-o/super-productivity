@@ -23,6 +23,8 @@ import { isTodayWithOffset } from '../../util/is-today.util';
 import { isValidDBDateStr } from '../../util/get-db-date-str';
 import { IssueLog } from '../log';
 import { LOCAL_REST_API_FEATURE_BRIDGE } from './local-rest-api-feature-bridge';
+import { LOCAL_REST_API_FEATURE_ROUTES } from './local-rest-api-feature-routes';
+import { createErrorResponse, createSuccessResponse } from './local-rest-api-response';
 
 import { TaskSharedActions } from '../../root-store/meta/task-shared.actions';
 // eslint-disable-next-line @typescript-eslint/no-restricted-imports -- grandfathered layer-boundary debt
@@ -339,38 +341,6 @@ const getQueryParamAsBoolean = (
   return value.toLowerCase() === 'true';
 };
 
-const createErrorResponse = (
-  requestId: string,
-  status: number,
-  code: string,
-  message: string,
-  details?: unknown,
-): LocalRestApiResponsePayload => ({
-  requestId,
-  status,
-  body: {
-    ok: false,
-    error: {
-      code,
-      message,
-      details,
-    },
-  },
-});
-
-const createSuccessResponse = (
-  requestId: string,
-  status: number,
-  data: unknown,
-): LocalRestApiResponsePayload => ({
-  requestId,
-  status,
-  body: {
-    ok: true,
-    data,
-  },
-});
-
 type TaskSource = 'active' | 'archived' | 'all';
 
 /**
@@ -405,6 +375,8 @@ export class LocalRestApiHandlerService {
   private readonly _tagService = inject(TagService);
   private readonly _dateService = inject(DateService);
   private readonly _featureBridge = inject(LOCAL_REST_API_FEATURE_BRIDGE);
+  private readonly _featureRoutes =
+    inject(LOCAL_REST_API_FEATURE_ROUTES, { optional: true }) ?? [];
   private readonly _store = inject(Store);
   // The main process only knows the renderer has booted, which happens before
   // the data is loaded — answering then would serve an empty task list as if it
@@ -531,6 +503,13 @@ export class LocalRestApiHandlerService {
 
     if (method === 'GET' && path === '/tags') {
       return this._handleListTags(requestId, query);
+    }
+
+    for (const routes of this._featureRoutes) {
+      const response = await routes.handle(payload);
+      if (response) {
+        return response;
+      }
     }
 
     return createErrorResponse(requestId, 404, 'NOT_FOUND', 'Route not found');
