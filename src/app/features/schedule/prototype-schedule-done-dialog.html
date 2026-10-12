@@ -1421,6 +1421,24 @@
       const hasDurationChoice = (sc.timeSpent > 0 && sc.timeSpent !== sc.timeEstimate);
       const isOvertime = sc.timeSpent > sc.timeEstimate;
 
+      // Clue for Box 1 (Schedule Placement)
+      let placementClue = '';
+      if (formState.schedulePlacement === 'allday') {
+        placementClue = 'Preserves slot at top of day timeline';
+      } else {
+        placementClue = `Places task into daily time grid at ${formatTime12h(formState.customTime)}`;
+      }
+
+      // Clue for Box 2 (Duration Adjustment)
+      let durationClue = '';
+      if (!hasDurationChoice) {
+        durationClue = `No duration discrepancy (${sc.timeSpentStr} spent vs ${sc.timeEstimateStr} estimate). Final duration will be <strong>${sc.timeEstimate > 0 ? sc.timeEstimateStr : '15m default'}</strong>.`;
+      } else if (formState.durationChoice === 'adjust') {
+        durationClue = `${isOvertime ? 'Reflects overtime work on calendar' : 'Frees up unused planned calendar time'} (${sc.timeSpentStr} actual).`;
+      } else {
+        durationClue = `Preserves planned time allocation on schedule (${sc.timeEstimateStr} planned).`;
+      }
+
       return `
         <div class="dialog-container variant-b">
           <div class="dialog-header">
@@ -1453,6 +1471,10 @@
                   <input type="time" value="${formState.customTime}" onchange="handleTimeChange(this.value)" onclick="event.stopPropagation(); handlePlacementChange('specific');" style="position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;">
                 </div>
               </div>
+              <div class="pill-clue">
+                <span class="material-icons clue-icon">info</span>
+                <span>${placementClue}</span>
+              </div>
             </div>
 
             <!-- Row 2: Duration -->
@@ -1479,6 +1501,10 @@
                   </button>
                 `}
               </div>
+              <div class="pill-clue">
+                <span class="material-icons clue-icon">info</span>
+                <span>${durationClue}</span>
+              </div>
             </div>
           </div>
 
@@ -1490,7 +1516,7 @@
               <button class="btn btn-secondary" onclick="handleCancel()">Cancel</button>
               <button class="btn btn-primary" onclick="handleComplete()">
                 <span class="material-icons" style="font-size: 16px;">check</span>
-                Done
+                Confirm
               </button>
             </div>
           </div>
