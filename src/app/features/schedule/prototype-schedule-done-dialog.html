@@ -305,6 +305,12 @@
     }
 
     /* Dialog Stage Backdrop Simulation */
+    #dialogMountPoint {
+      display: flex;
+      justify-content: center;
+      width: 100%;
+    }
+
     .dialog-stage {
       background: var(--scrim);
       border-radius: var(--dialog-border-radius);
@@ -524,7 +530,10 @@
     /* VARIANT B: Compact Segmented Pills (Speed & Keyboard-First)   */
     /* ------------------------------------------------------------- */
     .variant-b .dialog-container {
-      max-width: 440px;
+      width: 460px !important;
+      min-width: 460px !important;
+      max-width: 460px !important;
+      box-sizing: border-box;
     }
 
     .variant-b .task-header-compact {
@@ -561,26 +570,33 @@
       border: 1px solid var(--separator);
       padding: 3px;
       border-radius: 8px;
-      gap: 3px;
+      gap: 4px;
+      width: 100%;
+      height: 44px;
+      box-sizing: border-box;
     }
 
     .pill-button {
-      flex: 1;
+      flex: 1 1 0;
+      min-width: 0;
+      width: 100%;
+      height: 36px;
       background: transparent;
       border: none;
       color: var(--ink);
       font-family: inherit;
       font-size: 12.5px;
       font-weight: 500;
-      padding: 8px 10px;
+      padding: 0 10px;
       border-radius: 6px;
       cursor: pointer;
-      display: flex;
+      display: inline-flex;
       align-items: center;
       justify-content: center;
       gap: 6px;
       transition: var(--transition);
       white-space: nowrap;
+      box-sizing: border-box;
     }
     .pill-button:hover {
       background: var(--surface-3);
@@ -626,7 +642,26 @@
       font-weight: 400;
       color: var(--ink-muted);
       line-height: 1.35;
-      padding: 1px 2px 0 2px;
+      padding: 2px 2px 0 2px;
+      min-height: 32px;
+      display: flex;
+      align-items: flex-start;
+      box-sizing: border-box;
+    }
+
+    .variant-b .dialog-footer .btn {
+      height: 36px;
+      min-width: 105px;
+      justify-content: center;
+      box-sizing: border-box;
+      font-size: 13px;
+      padding: 0 16px;
+    }
+    .variant-b .dialog-footer .btn-secondary {
+      border: 1px solid var(--separator);
+    }
+    .variant-b .dialog-footer .btn-secondary:hover {
+      background: var(--surface-3);
     }
 
     /* ------------------------------------------------------------- */
