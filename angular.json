@@ -43,6 +43,7 @@
             "stylePreprocessorOptions": {
               "includePaths": [".", "src", "src/styles"]
             },
+            "externalDependencies": ["marked-katex-extension"],
             "allowedCommonJsDependencies": [
               "typia",
               "electron-log",
