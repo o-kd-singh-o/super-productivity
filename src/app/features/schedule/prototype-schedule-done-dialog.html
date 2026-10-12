@@ -726,45 +726,25 @@
       box-sizing: border-box;
     }
 
-    /* Inline time editor within segmented pill */
-    .variant-b .pill-button.editing-time {
-      background: var(--surface-1);
-      border-color: var(--primary);
-      cursor: default;
-      gap: 6px;
-      padding: 0 6px;
-    }
+    /* Seamless inline time editor within segmented pill */
     .variant-b .inline-time-input {
-      background: var(--surface-2);
-      border: 1px solid var(--primary);
-      color: var(--ink-strong);
-      font-family: inherit;
-      font-size: 12.5px;
-      font-weight: 600;
-      text-align: center;
-      padding: 2px 6px;
-      border-radius: 4px;
-      width: 95px;
-      height: 26px;
+      background: transparent;
+      border: none;
       outline: none;
-      box-shadow: 0 0 0 2px var(--primary-glow);
+      color: inherit;
+      font-family: inherit;
+      font-size: inherit;
+      font-weight: inherit;
+      line-height: inherit;
+      letter-spacing: inherit;
+      text-align: left;
+      padding: 0;
+      margin: 0;
+      width: 72px;
+      height: auto;
+      box-shadow: none;
       box-sizing: border-box;
-    }
-    .variant-b .inline-commit-btn {
-      width: 24px;
-      height: 24px;
-      background: var(--primary);
-      color: #ffffff;
-      border-radius: 3px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      flex-shrink: 0;
-      transition: var(--transition);
-    }
-    .variant-b .inline-commit-btn:hover {
-      background: var(--primary-hover);
+      caret-color: var(--primary);
     }
 
     /* Super Productivity Material Dialog Actions */
@@ -1671,8 +1651,8 @@
                   <span>12:00 AM (All Day)</span>
                 </button>
                 ${formState.isEditingTime && formState.schedulePlacement === 'specific' ? `
-                  <div class="pill-button active editing-time" onclick="event.stopPropagation()">
-                    <span class="material-icons" style="font-size: 15px; color: var(--primary);">schedule</span>
+                  <div class="pill-button active" onclick="event.stopPropagation()">
+                    <span class="material-icons" style="font-size: 15px;">schedule</span>
                     <input
                       id="customTimeInlineInput"
                       type="text"
@@ -1680,14 +1660,10 @@
                       value="${formatTime12h(formState.customTime)}"
                       onkeydown="handleInlineTimeKeydown(event)"
                       onblur="handleInlineTimeBlur(event)"
-                      placeholder="e.g. 11 or 11:00 AM"
-                      title="Type time (e.g. 11, 11:30, 2pm) and press Enter"
+                      placeholder="10:45 PM"
                       autocomplete="off"
                       spellcheck="false"
                     />
-                    <button type="button" class="inline-commit-btn" onmousedown="event.preventDefault(); commitInlineTime(document.getElementById('customTimeInlineInput').value);" title="Confirm time (Enter)">
-                      <span class="material-icons" style="font-size: 15px;">check</span>
-                    </button>
                   </div>
                 ` : `
                   <button
