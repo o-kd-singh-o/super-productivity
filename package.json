@@ -19,6 +19,7 @@
   "main": "./electron/main.js",
   "scripts": {
     "env": "node ./tools/load-env.js",
+    "prototype:dialog": "node ./scripts/run-prototype.js",
     "assemble:android:prod": "cd android && ./gradlew assembleRelease && cd ..",
     "assemble:android:stage": "cd android && ./gradlew assembleDebug && cd ..",
     "prebuild": "npm run env && node ./tools/git-version.js && npm run build:packages",

@@ -1,0 +1,1755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prototype: Task Completion & Schedule Dialog (Decision A1)</title>
+  <!-- Material Icons & Roboto Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Material+Icons&family=Material+Icons+Outlined&display=swap" rel="stylesheet">
+
+  <style>
+    /* ------------------------------------------------------------- */
+    /* Theme Tokens & Variables matching Super Productivity         */
+    /* ------------------------------------------------------------- */
+    :root {
+      --s-quarter: 2px;
+      --s-half: 4px;
+      --s: 8px;
+      --s2: 16px;
+      --s3: 24px;
+      --s4: 32px;
+      --border-radius: 8px;
+      --card-border-radius: 10px;
+      --dialog-border-radius: 12px;
+      --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      --font-family: 'Roboto', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body.isDarkTheme {
+      --surface-0: #121212;
+      --surface-1: #1e1e1e;
+      --surface-2: #282828;
+      --surface-3: #323232;
+      --surface-4: #3c3c3c;
+      --ink-strong: #ffffff;
+      --ink: #e0e0e0;
+      --ink-muted: rgba(255, 255, 255, 0.6);
+      --ink-faint: rgba(255, 255, 255, 0.38);
+      --separator: rgba(255, 255, 255, 0.12);
+      --scrim: rgba(0, 0, 0, 0.65);
+      --primary: #38a9f5;
+      --primary-hover: #298cd1;
+      --primary-subtle: rgba(56, 169, 245, 0.15);
+      --primary-glow: rgba(56, 169, 245, 0.25);
+      --accent: #ff4081;
+      --warn: #f44336;
+      --success: #4caf50;
+      --task-is-done-dim-opacity: 0.3;
+      --schedule-event-bg: #242426;
+      --project-color: #38a9f5;
+      --tag-color: #ab47bc;
+      --dialog-shadow: 0 11px 15px -7px rgba(0,0,0,0.5), 0 24px 38px 3px rgba(0,0,0,0.35), 0 9px 46px 8px rgba(0,0,0,0.25);
+    }
+
+    body:not(.isDarkTheme) {
+      --surface-0: #f5f5f7;
+      --surface-1: #ffffff;
+      --surface-2: #f0f0f2;
+      --surface-3: #e4e4e7;
+      --surface-4: #d8d8dc;
+      --ink-strong: #111827;
+      --ink: #374151;
+      --ink-muted: #6b7280;
+      --ink-faint: #9ca3af;
+      --separator: #e5e7eb;
+      --scrim: rgba(0, 0, 0, 0.45);
+      --primary: #0284c7;
+      --primary-hover: #0369a1;
+      --primary-subtle: rgba(2, 132, 199, 0.1);
+      --primary-glow: rgba(2, 132, 199, 0.2);
+      --accent: #ec4899;
+      --warn: #dc2626;
+      --success: #16a34a;
+      --task-is-done-dim-opacity: 0.35;
+      --schedule-event-bg: #ffffff;
+      --project-color: #0284c7;
+      --tag-color: #9333ea;
+      --dialog-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-family);
+      background: var(--surface-0);
+      color: var(--ink);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      padding-bottom: 90px; /* Room for floating switcher */
+    }
+
+    /* ------------------------------------------------------------- */
+    /* Prototype Header Bar                                          */
+    /* ------------------------------------------------------------- */
+    .prototype-bar {
+      background: var(--surface-1);
+      border-bottom: 1px solid var(--separator);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .proto-title-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .proto-badge {
+      background: var(--accent);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .proto-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--ink-strong);
+    }
+
+    .proto-subtitle {
+      font-size: 12px;
+      color: var(--ink-muted);
+    }
+
+    .proto-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-icon {
+      background: var(--surface-2);
+      border: 1px solid var(--separator);
+      color: var(--ink);
+      cursor: pointer;
+      padding: 6px 12px;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-family: inherit;
+      transition: var(--transition);
+    }
+    .btn-icon:hover {
+      background: var(--surface-3);
+      color: var(--ink-strong);
+    }
+    .btn-icon .material-icons {
+      font-size: 16px;
+    }
+
+    /* ------------------------------------------------------------- */
+    /* Scenario Selector Bar                                         */
+    /* ------------------------------------------------------------- */
+    .scenario-nav {
+      background: var(--surface-1);
+      border-bottom: 1px solid var(--separator);
+      padding: 10px 24px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      overflow-x: auto;
+    }
+
+    .scenario-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--ink-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-right: 8px;
+      white-space: nowrap;
+    }
+
+    .scenario-tab {
+      background: var(--surface-2);
+      border: 1px solid var(--separator);
+      color: var(--ink);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12.5px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+      transition: var(--transition);
+      user-select: none;
+    }
+    .scenario-tab:hover {
+      background: var(--surface-3);
+    }
+    .scenario-tab.active {
+      background: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary);
+      font-weight: 500;
+      box-shadow: 0 2px 6px var(--primary-glow);
+    }
+    .scenario-tab .chip {
+      background: rgba(0, 0, 0, 0.2);
+      padding: 2px 6px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-family: monospace;
+    }
+    .scenario-tab.active .chip {
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    /* ------------------------------------------------------------- */
+    /* Main Layout: Preview Area & State Inspector                   */
+    /* ------------------------------------------------------------- */
+    .main-container {
+      display: flex;
+      flex: 1;
+      padding: 24px;
+      gap: 24px;
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    @media (max-width: 900px) {
+      .main-container {
+        flex-direction: column;
+      }
+    }
+
+    .stage-column {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      align-items: center;
+    }
+
+    .inspector-column {
+      width: 380px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    @media (max-width: 900px) {
+      .inspector-column {
+        width: 100%;
+      }
+    }
+
+    /* Scenario Card Description */
+    .scenario-card {
+      background: var(--surface-1);
+      border: 1px solid var(--separator);
+      border-radius: var(--card-border-radius);
+      padding: 16px 20px;
+      width: 100%;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .scenario-card h3 {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--ink-strong);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .scenario-card p {
+      font-size: 13px;
+      color: var(--ink-muted);
+      line-height: 1.45;
+    }
+    .scenario-card .bypass-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(244, 67, 54, 0.15);
+      color: var(--warn);
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 500;
+      margin-top: 8px;
+    }
+
+    /* Dialog Stage Backdrop Simulation */
+    .dialog-stage {
+      background: var(--scrim);
+      border-radius: var(--dialog-border-radius);
+      padding: 40px 24px;
+      width: 100%;
+      min-height: 480px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: inset 0 0 20px rgba(0,0,0,0.3);
+      position: relative;
+    }
+
+    /* ------------------------------------------------------------- */
+    /* Base Modal Shell                                              */
+    /* ------------------------------------------------------------- */
+    .dialog-container {
+      background: var(--surface-1);
+      color: var(--ink);
+      border-radius: var(--dialog-border-radius);
+      box-shadow: var(--dialog-shadow);
+      border: 1px solid var(--separator);
+      width: 100%;
+      max-width: 500px;
+      overflow: hidden;
+      animation: dialogPop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+    }
+
+    @keyframes dialogPop {
+      0% { opacity: 0; transform: scale(0.95) translateY(10px); }
+      100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .dialog-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--separator);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .dialog-header-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--ink-strong);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .dialog-body {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .dialog-footer {
+      padding: 14px 20px;
+      background: var(--surface-2);
+      border-top: 1px solid var(--separator);
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .btn {
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: none;
+      transition: var(--transition);
+      outline: none;
+    }
+    .btn:focus-visible {
+      box-shadow: 0 0 0 2px var(--surface-1), 0 0 0 4px var(--primary);
+    }
+    .btn-secondary {
+      background: transparent;
+      color: var(--ink);
+    }
+    .btn-secondary:hover {
+      background: var(--surface-3);
+      color: var(--ink-strong);
+    }
+    .btn-primary {
+      background: var(--primary);
+      color: #ffffff;
+      box-shadow: 0 1px 3px var(--primary-glow);
+    }
+    .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+
+    .task-chip-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--surface-2);
+      border: 1px solid var(--separator);
+      padding: 10px 14px;
+      border-radius: var(--border-radius);
+    }
+    .task-chip-title {
+      font-weight: 500;
+      font-size: 14px;
+      color: var(--ink-strong);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .time-badge-pill {
+      font-size: 11px;
+      font-family: monospace;
+      background: var(--surface-3);
+      color: var(--ink-strong);
+      padding: 3px 8px;
+      border-radius: 12px;
+      border: 1px solid var(--separator);
+      white-space: nowrap;
+    }
+
+    /* ------------------------------------------------------------- */
+    /* VARIANT A: Structured Form Cards                             */
+    /* ------------------------------------------------------------- */
+    .variant-a .form-card {
+      background: var(--surface-2);
+      border: 1px solid var(--separator);
+      border-radius: var(--border-radius);
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .form-card-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--ink-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .radio-option {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      cursor: pointer;
+      user-select: none;
+      padding: 6px 8px;
+      border-radius: 6px;
+      transition: var(--transition);
+    }
+    .radio-option:hover {
+      background: var(--surface-3);
+    }
+    .radio-option input[type="radio"] {
+      margin-top: 3px;
+      accent-color: var(--primary);
+      cursor: pointer;
+    }
+    .radio-label-group {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      flex: 1;
+    }
+    .radio-label {
+      font-size: 13.5px;
+      font-weight: 500;
+      color: var(--ink-strong);
+    }
+    .radio-hint {
+      font-size: 12px;
+      color: var(--ink-muted);
+    }
+
+    .inline-time-input {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 6px;
+      padding-left: 26px;
+    }
+    .time-input {
+      font-family: inherit;
+      font-size: 13px;
+      background: var(--surface-1);
+      color: var(--ink-strong);
+      border: 1px solid var(--separator);
+      padding: 5px 10px;
+      border-radius: 6px;
+      outline: none;
+      width: 110px;
+    }
+    .time-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px var(--primary-subtle);
+    }
+
+    /* ------------------------------------------------------------- */
+    /* VARIANT B: Compact Segmented Pills (Speed & Keyboard-First)   */
+    /* ------------------------------------------------------------- */
+    .variant-b .dialog-container {
+      max-width: 440px;
+    }
+
+    .variant-b .task-header-compact {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .variant-b .task-header-compact .title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--ink-strong);
+    }
+    .variant-b .task-header-compact .subtitle {
+      font-size: 12px;
+      color: var(--ink-muted);
+    }
+
+    .pill-group-section {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .pill-section-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--ink-muted);
+    }
+
+    .segmented-pills {
+      display: flex;
+      background: var(--surface-2);
+      border: 1px solid var(--separator);
+      padding: 3px;
+      border-radius: 8px;
+      gap: 3px;
+    }
+
+    .pill-button {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--ink);
+      font-family: inherit;
+      font-size: 12.5px;
+      font-weight: 500;
+      padding: 8px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: var(--transition);
+      white-space: nowrap;
+    }
+    .pill-button:hover {
+      background: var(--surface-3);
+      color: var(--ink-strong);
+    }
+    .pill-button.active {
+      background: var(--surface-1);
+      color: var(--primary);
+      font-weight: 600;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+    }
+    .pill-button .pill-badge {
+      font-size: 10px;
+      padding: 1px 5px;
+      border-radius: 10px;
+      background: var(--surface-3);
+      color: var(--ink-muted);
+    }
+    .pill-button.active .pill-badge {
+      background: var(--primary-subtle);
+      color: var(--primary);
+    }
+
+    .keyboard-hint {
+      font-size: 11px;
+      color: var(--ink-faint);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .kbd {
+      background: var(--surface-3);
+      color: var(--ink);
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 10px;
+      border: 1px solid var(--separator);
+    }
+
+    /* ------------------------------------------------------------- */
+    /* VARIANT C: Visual Timeline Preview (Calendar Card)            */
+    /* ------------------------------------------------------------- */
+    .variant-c .timeline-preview-box {
+      background: var(--surface-2);
+      border: 1px solid var(--separator);
+      border-radius: var(--border-radius);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .timeline-preview-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--ink-muted);
+    }
+
+    /* Authentic Schedule Event Element */
+    .schedule-event-mock {
+      background: var(--schedule-event-bg);
+      border: 1px solid var(--separator);
+      border-left: 4px solid var(--project-color);
+      border-radius: 6px;
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      opacity: var(--task-is-done-dim-opacity);
+      transition: var(--transition);
+      position: relative;
+    }
+    .schedule-event-mock.highlight {
+      opacity: 0.95;
+      box-shadow: 0 2px 8px var(--primary-glow);
+    }
+    .schedule-event-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .schedule-event-mock .event-icon {
+      color: var(--project-color);
+      font-size: 18px;
+    }
+    .schedule-event-mock .event-title {
+      font-size: 13.5px;
+      text-decoration: line-through;
+      color: var(--ink-strong);
+      font-weight: 500;
+    }
+    .schedule-event-mock .event-time-badge {
+      font-size: 11px;
+      color: var(--ink);
+      background: var(--surface-3);
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-family: monospace;
+    }
+
+    /* Side-by-side Choice Tiles */
+    .choice-tiles-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .choice-tile {
+      background: var(--surface-2);
+      border: 2px solid var(--separator);
+      border-radius: var(--border-radius);
+      padding: 12px 14px;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      user-select: none;
+    }
+    .choice-tile:hover {
+      background: var(--surface-3);
+      border-color: var(--ink-faint);
+    }
+    .choice-tile.selected {
+      background: var(--primary-subtle);
+      border-color: var(--primary);
+    }
+    .tile-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--ink-strong);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .tile-title .material-icons {
+      font-size: 18px;
+      color: var(--primary);
+      opacity: 0;
+      transition: var(--transition);
+    }
+    .choice-tile.selected .tile-title .material-icons {
+      opacity: 1;
+    }
+    .tile-desc {
+      font-size: 11.5px;
+      color: var(--ink-muted);
+      line-height: 1.35;
+    }
+    .tile-duration-bar {
+      height: 4px;
+      background: var(--surface-3);
+      border-radius: 2px;
+      margin-top: 4px;
+      overflow: hidden;
+    }
+    .tile-duration-bar-fill {
+      height: 100%;
+      background: var(--primary);
+      transition: width 0.3s ease;
+    }
+
+    /* ------------------------------------------------------------- */
+    /* State Inspector Column                                        */
+    /* ------------------------------------------------------------- */
+    .inspector-panel {
+      background: var(--surface-1);
+      border: 1px solid var(--separator);
+      border-radius: var(--card-border-radius);
+      overflow: hidden;
+    }
+    .inspector-header {
+      background: var(--surface-2);
+      border-bottom: 1px solid var(--separator);
+      padding: 10px 16px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--ink-muted);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .inspector-body {
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      font-size: 12.5px;
+    }
+    .inspector-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 6px;
+      border-bottom: 1px dashed var(--separator);
+    }
+    .inspector-row:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+    .inspector-key {
+      color: var(--ink-muted);
+      font-weight: 400;
+    }
+    .inspector-val {
+      font-family: monospace;
+      font-weight: 600;
+      color: var(--ink-strong);
+    }
+    .inspector-json {
+      background: var(--surface-0);
+      border: 1px solid var(--separator);
+      border-radius: 6px;
+      padding: 10px;
+      font-family: monospace;
+      font-size: 11px;
+      max-height: 160px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      color: var(--ink);
+    }
+
+    /* Toast Notification */
+    .toast-container {
+      position: fixed;
+      top: 24px;
+      right: 24px;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none;
+    }
+    .toast {
+      background: var(--surface-3);
+      color: var(--ink-strong);
+      border: 1px solid var(--separator);
+      padding: 12px 18px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: toastSlide 0.3s ease;
+      pointer-events: auto;
+    }
+    .toast.success {
+      border-left: 4px solid var(--success);
+    }
+    .toast.warn {
+      border-left: 4px solid var(--warn);
+    }
+    @keyframes toastSlide {
+      from { transform: translateX(50px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    /* ------------------------------------------------------------- */
+    /* Floating Prototype Switcher (Skill Requirement)              */
+    /* ------------------------------------------------------------- */
+    .prototype-switcher-dock {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      background: #111827; /* High contrast dark pill */
+      color: #f9fafb;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 30px;
+      padding: 6px 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(0,0,0,0.1);
+      user-select: none;
+    }
+
+    .dock-arrow {
+      background: transparent;
+      border: none;
+      color: #e5e7eb;
+      cursor: pointer;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition);
+      outline: none;
+    }
+    .dock-arrow:hover {
+      background: rgba(255, 255, 255, 0.15);
+      color: #ffffff;
+    }
+    .dock-arrow:focus-visible {
+      box-shadow: 0 0 0 2px var(--primary);
+    }
+
+    .dock-content {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 6px;
+    }
+    .dock-variant-badge {
+      background: var(--primary);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 10px;
+    }
+    .dock-variant-name {
+      font-size: 13.5px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    .dock-hotkey {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.45);
+      margin-left: 4px;
+    }
+
+    /* Modal Backdrop simulated dismiss on ESC */
+    .dialog-backdrop-hint {
+      position: absolute;
+      top: 10px;
+      right: 12px;
+      font-size: 11px;
+      color: var(--ink-faint);
+    }
+  </style>
+</head>
+<body class="isDarkTheme">
+
+  <!-- Top Prototype Control Header -->
+  <header class="prototype-bar">
+    <div class="proto-title-group">
+      <span class="proto-badge">Prototype</span>
+      <div>
+        <div class="proto-title">Task Completion & Schedule Dialog (Decision A1)</div>
+        <div class="proto-subtitle">Feature: Keep completed tasks visible on schedule view &bull; Opt-in prompt sub-setting</div>
+      </div>
+    </div>
+    <div class="proto-actions">
+      <button class="btn-icon" id="themeToggleBtn" title="Toggle Dark/Light Mode">
+        <span class="material-icons" id="themeIcon">light_mode</span>
+        <span id="themeText">Light Theme</span>
+      </button>
+      <button class="btn-icon" id="resetScenarioBtn" title="Reset Current Scenario State">
+        <span class="material-icons">refresh</span>
+        <span>Reset State</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Scenario Navigation Tabs -->
+  <nav class="scenario-nav" id="scenarioNav">
+    <span class="scenario-label">Scenarios:</span>
+    <button class="scenario-tab active" data-scenario="1">
+      <span>1. - / - (Unscheduled)</span>
+      <span class="chip">0m / 0m</span>
+    </button>
+    <button class="scenario-tab" data-scenario="2">
+      <span>2. - / 1h (Unscheduled)</span>
+      <span class="chip">0m / 1h</span>
+    </button>
+    <button class="scenario-tab" data-scenario="3">
+      <span>3. 30m / 1h (Unscheduled)</span>
+      <span class="chip">30m / 1h</span>
+    </button>
+    <button class="scenario-tab" data-scenario="4">
+      <span>4. 30m / 1h (10:00 AM)</span>
+      <span class="chip">Scheduled</span>
+    </button>
+    <button class="scenario-tab" data-scenario="5">
+      <span>5. 1h 30m / 1h (Overtime)</span>
+      <span class="chip">+30m Over</span>
+    </button>
+  </nav>
+
+  <!-- Main Work Area -->
+  <main class="main-container">
+    <div class="stage-column">
+
+      <!-- Scenario Explanatory Card -->
+      <section class="scenario-card" id="scenarioCard">
+        <h3 id="scenarioCardTitle">
+          <span class="material-icons" style="font-size: 18px; color: var(--primary);">flag</span>
+          <span id="scenarioHeading">Scenario 1: Unscheduled Flow Task (- / -)</span>
+        </h3>
+        <p id="scenarioDesc">
+          Task has 0m tracked and 0m estimate. It was worked on during the day without an explicit start time. When completed, dialog prompts whether to place it as an all-day block at 12:00 AM or specify a scheduled start time. Duration defaults to standard minimum slot.
+        </p>
+        <div id="scenarioBypassTag" class="bypass-tag" style="display: none;">
+          <span class="material-icons" style="font-size: 14px;">bolt</span>
+          <span>In production: Already scheduled task without duration discrepancy bypasses prompt</span>
+        </div>
+      </section>
+
+      <!-- Dialog Interactive Stage -->
+      <div class="dialog-stage" id="dialogStage">
+        <span class="dialog-backdrop-hint">Press [Esc] to cancel &bull; [Enter] to complete</span>
+
+        <!-- Render Target for Selected Variant -->
+        <div id="dialogMountPoint"></div>
+      </div>
+
+    </div>
+
+    <!-- Right Side: State Inspector -->
+    <aside class="inspector-column">
+      <div class="inspector-panel">
+        <div class="inspector-header">
+          <span>Active Task State</span>
+          <span class="material-icons" style="font-size: 16px;">tune</span>
+        </div>
+        <div class="inspector-body">
+          <div class="inspector-row">
+            <span class="inspector-key">Task Title</span>
+            <span class="inspector-val" id="inspTaskTitle">Prepare Q3 Product Roadmap</span>
+          </div>
+          <div class="inspector-row">
+            <span class="inspector-key">Original Estimate</span>
+            <span class="inspector-val" id="inspEstimate">0m</span>
+          </div>
+          <div class="inspector-row">
+            <span class="inspector-key">Time Spent</span>
+            <span class="inspector-val" id="inspSpent">0m</span>
+          </div>
+          <div class="inspector-row">
+            <span class="inspector-key">Current Schedule</span>
+            <span class="inspector-val" id="inspSchedule">Unscheduled (12 AM)</span>
+          </div>
+          <div class="inspector-row">
+            <span class="inspector-key">Task Status</span>
+            <span class="inspector-val" id="inspStatus" style="color: var(--warn);">Incomplete</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="inspector-panel">
+        <div class="inspector-header">
+          <span>Resulting Schedule Block</span>
+          <span class="material-icons" style="font-size: 16px;">calendar_today</span>
+        </div>
+        <div class="inspector-body">
+          <div class="inspector-row">
+            <span class="inspector-key">Placement Time</span>
+            <span class="inspector-val" id="inspResultTime">12:00 AM (All-Day)</span>
+          </div>
+          <div class="inspector-row">
+            <span class="inspector-key">Final Duration</span>
+            <span class="inspector-val" id="inspResultDuration">15m</span>
+          </div>
+          <div class="inspector-row">
+            <span class="inspector-key">Schedule Styling</span>
+            <span class="inspector-val" id="inspResultStyle">Strikethrough + 30% Dim</span>
+          </div>
+          <div class="inspector-row">
+            <span class="inspector-key">Architectural Duration Fix</span>
+            <span class="inspector-val" style="color: var(--success); font-size: 11px;">Historical (Not Forecast)</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="inspector-panel">
+        <div class="inspector-header">
+          <span>Dispatched Action Payload</span>
+          <span class="material-icons" style="font-size: 16px;">code</span>
+        </div>
+        <div class="inspector-body">
+          <pre class="inspector-json" id="inspJson">// Waiting for user action...</pre>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Floating Prototype Switcher (SKILL requirement) -->
+  <div class="prototype-switcher-dock" id="prototypeSwitcher">
+    <button class="dock-arrow" id="dockPrevBtn" title="Previous Variant (←)">
+      <span class="material-icons">chevron_left</span>
+    </button>
+    <div class="dock-content">
+      <span class="dock-variant-badge" id="dockVariantBadge">Variant A</span>
+      <span class="dock-variant-name" id="dockVariantName">Structured Form Cards</span>
+      <span class="dock-hotkey">[← / →]</span>
+    </div>
+    <button class="dock-arrow" id="dockNextBtn" title="Next Variant (→)">
+      <span class="material-icons">chevron_right</span>
+    </button>
+  </div>
+
+  <!-- ------------------------------------------------------------- -->
+  <!-- Prototype Core Logic & Interactive Controller                 -->
+  <!-- ------------------------------------------------------------- -->
+  <script>
+    // State Model Definition
+    const VARIANTS = [
+      { id: 'A', name: 'Structured Form Cards', subtitle: 'Explicit Material cards, familiar form inputs' },
+      { id: 'B', name: 'Compact Segmented Pills', subtitle: 'High-density, rapid single-click keyboard flow' },
+      { id: 'C', name: 'Visual Timeline Preview', subtitle: 'Live calendar mock slot with side-by-side outcome tiles' }
+    ];
+
+    const SCENARIOS = {
+      1: {
+        id: 1,
+        title: 'Scenario 1: Unscheduled (- / -)',
+        badge: '0m / 0m',
+        taskTitle: 'Write sprint recap notes',
+        timeEstimate: 0,
+        timeSpent: 0,
+        timeEstimateStr: '0m',
+        timeSpentStr: '0m',
+        isScheduled: false,
+        scheduledTime: null,
+        desc: 'Unscheduled task with 0m estimate and 0m tracked time. Dialog asks for schedule placement (12:00 AM all-day vs. specific time). Duration adjustment is omitted because there is no estimate or tracked time to compare.',
+        bypass: false
+      },
+      2: {
+        id: 2,
+        title: 'Scenario 2: Unscheduled (- / 1h)',
+        badge: '0m / 1h',
+        taskTitle: 'Review pull request #10767',
+        timeEstimate: 3600000,
+        timeSpent: 0,
+        timeEstimateStr: '1h',
+        timeSpentStr: '0m',
+        isScheduled: false,
+        scheduledTime: null,
+        desc: 'Unscheduled task with 1h estimate and 0m tracked. Dialog asks for schedule placement. Duration retains planned 1h block rather than shrinking to 0m.',
+        bypass: false
+      },
+      3: {
+        id: 3,
+        title: 'Scenario 3: Unscheduled (30m / 1h)',
+        badge: '30m / 1h',
+        taskTitle: 'Refactor schedule event rendering',
+        timeEstimate: 3600000,
+        timeSpent: 1800000,
+        timeEstimateStr: '1h',
+        timeSpentStr: '30m',
+        isScheduled: false,
+        scheduledTime: null,
+        desc: 'Unscheduled task with 1h estimate and 30m tracked. Dialog asks for schedule placement AND offers duration adjustment: keep planned 1h vs shrink to actual 30m.',
+        bypass: false
+      },
+      4: {
+        id: 4,
+        title: 'Scenario 4: Scheduled 10:00 AM (30m / 1h)',
+        badge: 'Scheduled',
+        taskTitle: 'Prepare quarterly product roadmap',
+        timeEstimate: 3600000,
+        timeSpent: 1800000,
+        timeEstimateStr: '1h',
+        timeSpentStr: '30m',
+        isScheduled: true,
+        scheduledTime: '10:00 AM',
+        scheduledTime24: '10:00',
+        desc: 'Already scheduled for 10:00 - 11:00 AM, but finished in 30m. Dialog offers duration adjustment (keep 1h vs shrink to 30m) and presents pre-filled 10:00 AM for optional editing.',
+        bypass: false
+      },
+      5: {
+        id: 5,
+        title: 'Scenario 5: Scheduled 10:00 AM (1h 30m / 1h — Overtime)',
+        badge: '+30m Over',
+        taskTitle: 'Deploy production release candidate',
+        timeEstimate: 3600000,
+        timeSpent: 5400000,
+        timeEstimateStr: '1h',
+        timeSpentStr: '1h 30m',
+        isScheduled: true,
+        scheduledTime: '10:00 AM',
+        scheduledTime24: '10:00',
+        desc: 'Already scheduled for 10:00 AM with 1h estimate, but took 1h 30m (overtime). Dialog offers duration expand (keep 1h vs expand to 1h 30m).',
+        bypass: false
+      }
+    };
+
+    // Current State
+    let currentVariantIndex = 0;
+    let currentScenarioId = 1;
+    let formState = {
+      schedulePlacement: 'allday', // 'allday' | 'specific'
+      customTime: '10:00',
+      durationChoice: 'adjust', // 'keep' | 'adjust'
+      isCompleted: false
+    };
+
+    // Helper: format duration in minutes
+    function getDurationMinutes(scenario, choice) {
+      if (scenario.id === 1) return 15; // default minimum
+      if (scenario.id === 2) return 60; // 1h
+      if (choice === 'keep') return 60; // 1h
+      if (scenario.id === 3 || scenario.id === 4) return 30; // 30m
+      if (scenario.id === 5) return 90; // 1h 30m
+      return 60;
+    }
+
+    // Helper: compute display time
+        function formatTime12h(time24) {
+      if (!time24) return '10:45 PM';
+      const parts = time24.split(':');
+      let h = parseInt(parts[0], 10);
+      const m = parts[1] || '00';
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      h = h % 12;
+      if (h === 0) h = 12;
+      return `${h}:${m} ${ampm}`;
+    }
+
+    function computeResultTime(scenario, form) {
+      if (scenario.isScheduled) {
+        return form.schedulePlacement === 'allday' ? '12:00 AM (All-Day)' : `${formatTime12h(form.customTime || scenario.scheduledTime24)}`;
+      }
+      return form.schedulePlacement === 'allday' ? '12:00 AM (All-Day)' : `${formatTime12h(form.customTime)}`;
+    }
+
+    // Helper: Toast message
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.innerHTML = `
+        <span class="material-icons">${type === 'success' ? 'check_circle' : 'info'}</span>
+        <span>${message}</span>
+      `;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(-10px)';
+        toast.style.transition = 'all 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+
+    // Initialize from URL params (?variant=A/B/C&scenario=1..5)
+    function initFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      const vParam = params.get('variant');
+      if (vParam) {
+        const foundIdx = VARIANTS.findIndex(v => v.id.toLowerCase() === vParam.toLowerCase());
+        if (foundIdx >= 0) currentVariantIndex = foundIdx;
+      }
+      const sParam = params.get('scenario');
+      if (sParam && SCENARIOS[sParam]) {
+        currentScenarioId = parseInt(sParam, 10);
+      }
+      updateFormDefaults();
+    }
+
+    // Update URL without reloading
+    function updateUrl() {
+      const v = VARIANTS[currentVariantIndex].id;
+      const s = currentScenarioId;
+      const newUrl = `${window.location.pathname}?variant=${v}&scenario=${s}`;
+      window.history.replaceState({}, '', newUrl);
+    }
+
+    // Update Form State when scenario changes
+    function updateFormDefaults() {
+      const sc = SCENARIOS[currentScenarioId];
+      formState.isCompleted = false;
+      if (sc.isScheduled) {
+        formState.schedulePlacement = 'specific';
+        formState.customTime = sc.scheduledTime24 || '22:45';
+      } else {
+        formState.schedulePlacement = 'allday';
+        formState.customTime = '22:45';
+      }
+      // default duration adjustment
+      formState.durationChoice = (sc.timeSpent > 0 && sc.timeSpent !== sc.timeEstimate) ? 'adjust' : 'keep';
+    }
+
+    // Surface State into Inspector Panel (Skill Requirement 5)
+    function renderInspector() {
+      const sc = SCENARIOS[currentScenarioId];
+      const durMin = getDurationMinutes(sc, formState.durationChoice);
+      const timeStr = computeResultTime(sc, formState);
+
+      document.getElementById('inspTaskTitle').textContent = sc.taskTitle;
+      document.getElementById('inspEstimate').textContent = sc.timeEstimateStr;
+      document.getElementById('inspSpent').textContent = sc.timeSpentStr;
+      document.getElementById('inspSchedule').textContent = sc.isScheduled ? sc.scheduledTime : 'Unscheduled';
+      
+      const statusEl = document.getElementById('inspStatus');
+      if (formState.isCompleted) {
+        statusEl.textContent = 'Completed (Done)';
+        statusEl.style.color = 'var(--success)';
+      } else {
+        statusEl.textContent = 'Active (Incomplete)';
+        statusEl.style.color = 'var(--warn)';
+      }
+
+      document.getElementById('inspResultTime').textContent = timeStr;
+      document.getElementById('inspResultDuration').textContent = `${durMin}m`;
+
+      const payload = {
+        action: formState.isCompleted ? 'COMPLETE_TASK_CONFIRMED' : 'DIALOG_PREVIEW',
+        taskId: `TASK_${sc.id}`,
+        title: sc.taskTitle,
+        isDone: formState.isCompleted,
+        scheduledPlacement: formState.schedulePlacement,
+        startTime: timeStr,
+        finalDurationMinutes: durMin,
+        historicalDurationMode: true,
+        calendarStyling: {
+          lineThrough: true,
+          opacity: 0.3,
+          preserveOriginalIcon: true,
+          isDraggable: true
+        }
+      };
+
+      document.getElementById('inspJson').textContent = JSON.stringify(payload, null, 2);
+    }
+
+    // -------------------------------------------------------------
+    // RENDER VARIANTS
+    // -------------------------------------------------------------
+
+    // VARIANT A: Structured Form Cards
+    function renderVariantA(sc) {
+      const hasDurationChoice = (sc.timeSpent > 0 && sc.timeSpent !== sc.timeEstimate);
+      const isOvertime = sc.timeSpent > sc.timeEstimate;
+
+      return `
+        <div class="dialog-container variant-a">
+          <div class="dialog-header">
+            <div class="dialog-header-title">
+              <span class="material-icons" style="color: var(--primary);">check_circle_outline</span>
+              <span>Complete Task & Schedule</span>
+            </div>
+            <button class="btn btn-secondary" style="padding: 4px;" onclick="handleCancel()" title="Close (Esc)">
+              <span class="material-icons" style="font-size: 18px;">close</span>
+            </button>
+          </div>
+
+          <div class="dialog-body">
+            <div class="task-chip-header">
+              <span class="task-chip-title" title="${sc.taskTitle}">
+                <span class="material-icons" style="color: var(--primary); font-size: 18px;">task_alt</span>
+                ${sc.taskTitle}
+              </span>
+              <span class="time-badge-pill">${sc.timeSpentStr} / ${sc.timeEstimateStr}</span>
+            </div>
+
+            <!-- Card 1: Schedule Placement -->
+            <div class="form-card">
+              <div class="form-card-title">
+                <span class="material-icons" style="font-size: 15px;">calendar_month</span>
+                <span>1. Schedule Placement</span>
+              </div>
+
+              <label class="radio-option">
+                <input type="radio" name="vA_placement" value="allday" ${formState.schedulePlacement === 'allday' ? 'checked' : ''} onchange="handlePlacementChange('allday')">
+                <div class="radio-label-group">
+                  <span class="radio-label">Keep at 12:00 AM (All Day)</span>
+                  <span class="radio-hint">Preserves slot at top of day timeline</span>
+                </div>
+              </label>
+
+              <label class="radio-option">
+                <input type="radio" name="vA_placement" value="specific" ${formState.schedulePlacement === 'specific' ? 'checked' : ''} onchange="handlePlacementChange('specific')">
+                <div class="radio-label-group">
+                  <span class="radio-label">Schedule at specific time</span>
+                  <span class="radio-hint">Places task into daily time grid</span>
+                </div>
+              </label>
+
+              ${formState.schedulePlacement === 'specific' ? `
+                <div class="inline-time-input">
+                  <span class="material-icons" style="font-size: 16px; color: var(--ink-muted);">schedule</span>
+                  <label style="font-size: 12px; color: var(--ink-muted);">Start Time:</label>
+                  <input type="time" class="time-input" value="${formState.customTime}" onchange="handleTimeChange(this.value)">
+                </div>
+              ` : ''}
+            </div>
+
+            <!-- Card 2: Duration Adjustment -->
+            <div class="form-card">
+              <div class="form-card-title">
+                <span class="material-icons" style="font-size: 15px;">timelapse</span>
+                <span>2. Duration Adjustment</span>
+              </div>
+
+              ${hasDurationChoice ? `
+                <label class="radio-option">
+                  <input type="radio" name="vA_duration" value="keep" ${formState.durationChoice === 'keep' ? 'checked' : ''} onchange="handleDurationChange('keep')">
+                  <div class="radio-label-group">
+                    <span class="radio-label">Keep original estimate (${sc.timeEstimateStr})</span>
+                    <span class="radio-hint">Preserves planned time allocation on schedule</span>
+                  </div>
+                </label>
+
+                <label class="radio-option">
+                  <input type="radio" name="vA_duration" value="adjust" ${formState.durationChoice === 'adjust' ? 'checked' : ''} onchange="handleDurationChange('adjust')">
+                  <div class="radio-label-group">
+                    <span class="radio-label">${isOvertime ? 'Expand to actual time spent' : 'Adjust to actual time spent'} (${sc.timeSpentStr})</span>
+                    <span class="radio-hint">${isOvertime ? 'Reflects overtime work on calendar' : 'Frees up unused planned calendar time'}</span>
+                  </div>
+                </label>
+              ` : `
+                <div style="font-size: 12.5px; color: var(--ink-muted); padding: 4px 8px;">
+                  <span class="material-icons" style="font-size: 14px; vertical-align: middle; color: var(--primary);">info</span>
+                  No duration discrepancy (${sc.timeSpentStr} spent vs ${sc.timeEstimateStr} estimate). Final duration will be <strong>${sc.timeEstimate > 0 ? sc.timeEstimateStr : '15m default'}</strong>.
+                </div>
+              `}
+            </div>
+          </div>
+
+          <div class="dialog-footer">
+            <button class="btn btn-secondary" onclick="handleCancel()">
+              Cancel <span style="font-size: 10px; opacity: 0.6;">(Esc)</span>
+            </button>
+            <button class="btn btn-primary" onclick="handleComplete()">
+              <span class="material-icons" style="font-size: 16px;">done</span>
+              Complete Task <span style="font-size: 10px; opacity: 0.8;">(Enter)</span>
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    // VARIANT B: Compact Segmented Pills (Speed & Keyboard-First)
+    function renderVariantB(sc) {
+      const hasDurationChoice = (sc.timeSpent > 0 && sc.timeSpent !== sc.timeEstimate);
+      const isOvertime = sc.timeSpent > sc.timeEstimate;
+
+      return `
+        <div class="dialog-container variant-b">
+          <div class="dialog-header">
+            <div class="task-header-compact">
+              <span class="title">${sc.taskTitle}</span>
+              <span class="subtitle">
+                Tracked <strong>${sc.timeSpentStr}</strong> of <strong>${sc.timeEstimateStr}</strong> estimate
+              </span>
+            </div>
+            <button class="btn btn-secondary" style="padding: 4px;" onclick="handleCancel()" title="Cancel (Esc)">
+              <span class="material-icons" style="font-size: 18px;">close</span>
+            </button>
+          </div>
+
+          <div class="dialog-body">
+            <!-- Row 1: When -->
+            <div class="pill-group-section">
+              <span class="pill-section-label" style="display: flex; align-items: center; gap: 6px; font-weight: 600;">
+                <span class="material-icons" style="font-size: 15px; color: var(--primary);">event</span>
+                <span>1. SCHEDULE PLACEMENT</span>
+              </span>
+              <div class="segmented-pills">
+                <button class="pill-button ${formState.schedulePlacement === 'allday' ? 'active' : ''}" onclick="handlePlacementChange('allday')">
+                  <span class="material-icons" style="font-size: 15px;">wb_sunny</span>
+                  <span>12:00 AM (All Day)</span>
+                </button>
+                <div class="pill-button ${formState.schedulePlacement === 'specific' ? 'active' : ''}" style="position: relative; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px;" onclick="handlePlacementChange('specific')">
+                  <span class="material-icons" style="font-size: 15px;">schedule</span>
+                  <span>${formatTime12h(formState.customTime)}</span>
+                  <input type="time" value="${formState.customTime}" onchange="handleTimeChange(this.value)" onclick="event.stopPropagation(); handlePlacementChange('specific');" style="position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;">
+                </div>
+              </div>
+            </div>
+
+            <!-- Row 2: Duration -->
+            <div class="pill-group-section">
+              <span class="pill-section-label" style="display: flex; align-items: center; gap: 6px; font-weight: 600;">
+                <span class="material-icons" style="font-size: 15px; color: var(--primary);">schedule</span>
+                <span>2. DURATION ADJUSTMENT</span>
+              </span>
+              <div class="segmented-pills">
+                ${hasDurationChoice ? `
+                  <!-- Left: Actual (timeSpent) -->
+                  <button class="pill-button ${formState.durationChoice === 'adjust' ? 'active' : ''}" onclick="handleDurationChange('adjust')">
+                    <span>${isOvertime ? 'Expand to' : 'Shrink to'} ${sc.timeSpentStr}</span>
+                    <span class="pill-badge">Actual</span>
+                  </button>
+                  <!-- Right: Planned (timeEstimate) -->
+                  <button class="pill-button ${formState.durationChoice === 'keep' ? 'active' : ''}" onclick="handleDurationChange('keep')">
+                    <span>Keep ${sc.timeEstimate > 0 ? sc.timeEstimateStr : 'Default'}</span>
+                    <span class="pill-badge">Planned</span>
+                  </button>
+                ` : `
+                  <button class="pill-button" disabled style="opacity: 0.5; cursor: not-allowed;">
+                    <span>Matches (${sc.timeEstimateStr})</span>
+                  </button>
+                `}
+              </div>
+            </div>
+          </div>
+
+          <div class="dialog-footer" style="justify-content: space-between;">
+            <div class="keyboard-hint">
+              <span class="kbd">↵ Enter</span> confirm &bull; <span class="kbd">Esc</span> cancel
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-secondary" onclick="handleCancel()">Cancel</button>
+              <button class="btn btn-primary" onclick="handleComplete()">
+                <span class="material-icons" style="font-size: 16px;">check</span>
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // VARIANT C: Visual Timeline Preview (Calendar Card)
+    function renderVariantC(sc) {
+      const hasDurationChoice = (sc.timeSpent > 0 && sc.timeSpent !== sc.timeEstimate);
+      const isOvertime = sc.timeSpent > sc.timeEstimate;
+      const durMinutes = getDurationMinutes(sc, formState.durationChoice);
+      const startTimeStr = computeResultTime(sc, formState);
+
+      // Compute display time range
+      let timeRangeStr = '12:00 AM – 12:15 AM';
+      if (formState.schedulePlacement === 'specific') {
+        const [h, m] = formState.customTime.split(':').map(Number);
+        const endTotalMin = h * 60 + m + durMinutes;
+        const endH = Math.floor(endTotalMin / 60) % 24;
+        const endM = endTotalMin % 60;
+        const endFormatted = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+        timeRangeStr = `${formState.customTime} – ${endFormatted}`;
+      } else {
+        timeRangeStr = `All-Day (${durMinutes}m)`;
+      }
+
+      return `
+        <div class="dialog-container variant-c" style="max-width: 520px;">
+          <div class="dialog-header">
+            <div class="dialog-header-title">
+              <span class="material-icons" style="color: var(--primary);">calendar_view_day</span>
+              <span>Schedule Calendar Preview</span>
+            </div>
+            <button class="btn btn-secondary" style="padding: 4px;" onclick="handleCancel()" title="Cancel (Esc)">
+              <span class="material-icons" style="font-size: 18px;">close</span>
+            </button>
+          </div>
+
+          <div class="dialog-body">
+            <!-- Mini Schedule Event Mock Preview -->
+            <div class="timeline-preview-box">
+              <div class="timeline-preview-header">
+                <span>SCHEDULE VIEW RENDERING (DAY / WEEK / MONTH)</span>
+                <span style="font-size: 11px; color: var(--primary); font-family: monospace;">${durMinutes} MIN BLOCK</span>
+              </div>
+
+              <div class="schedule-event-mock highlight">
+                <div class="schedule-event-left">
+                  <span class="material-icons event-icon">check_circle</span>
+                  <span class="event-title">${sc.taskTitle}</span>
+                </div>
+                <span class="event-time-badge">${timeRangeStr}</span>
+              </div>
+
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 4px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span style="font-size: 12px; color: var(--ink-muted);">Placement:</span>
+                  <select class="time-input" style="width: auto; padding: 4px 8px; font-size: 12px;" onchange="handlePlacementChange(this.value)">
+                    <option value="allday" ${formState.schedulePlacement === 'allday' ? 'selected' : ''}>12:00 AM (All-Day Slot)</option>
+                    <option value="specific" ${formState.schedulePlacement === 'specific' ? 'selected' : ''}>Specific Time (${formState.customTime})</option>
+                  </select>
+                </div>
+                ${formState.schedulePlacement === 'specific' ? `
+                  <input type="time" class="time-input" style="padding: 3px 6px; width: 100px; font-size: 12px;" value="${formState.customTime}" onchange="handleTimeChange(this.value)">
+                ` : ''}
+              </div>
+            </div>
+
+            <!-- Side-by-side Choice Tiles -->
+            <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--ink-muted); letter-spacing: 0.5px;">
+              Select Duration Option
+            </div>
+
+            <div class="choice-tiles-grid">
+              <!-- Tile 1: Keep planned estimate -->
+              <div class="choice-tile ${formState.durationChoice === 'keep' ? 'selected' : ''}" onclick="handleDurationChange('keep')">
+                <div class="tile-title">
+                  <span>Keep Estimate</span>
+                  <span class="material-icons">check_circle</span>
+                </div>
+                <div class="tile-desc">
+                  Preserve <strong>${sc.timeEstimate > 0 ? sc.timeEstimateStr : '15m default'}</strong> calendar slot as planned.
+                </div>
+                <div class="tile-duration-bar">
+                  <div class="tile-duration-bar-fill" style="width: 100%;"></div>
+                </div>
+              </div>
+
+              <!-- Tile 2: Adjust to actual time -->
+              <div class="choice-tile ${formState.durationChoice === 'adjust' ? 'selected' : ''}" onclick="handleDurationChange('adjust')">
+                <div class="tile-title">
+                  <span>${isOvertime ? 'Expand Actual' : 'Shrink to Actual'}</span>
+                  <span class="material-icons">check_circle</span>
+                </div>
+                <div class="tile-desc">
+                  ${hasDurationChoice ? 
+                    `Set calendar slot to <strong>${sc.timeSpentStr}</strong> actually tracked.` : 
+                    `No difference tracked (${sc.timeSpentStr}).`
+                  }
+                </div>
+                <div class="tile-duration-bar">
+                  <div class="tile-duration-bar-fill" style="width: ${hasDurationChoice ? (isOvertime ? '100%' : '50%') : '100%'};"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="dialog-footer">
+            <button class="btn btn-secondary" onclick="handleCancel()">
+              Cancel
+            </button>
+            <button class="btn btn-primary" onclick="handleComplete()">
+              <span class="material-icons" style="font-size: 16px;">save</span>
+              Save & Complete
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    // -------------------------------------------------------------
+    // Controller Dispatcher
+    // -------------------------------------------------------------
+    function renderDialog() {
+      const mount = document.getElementById('dialogMountPoint');
+      const sc = SCENARIOS[currentScenarioId];
+      const variant = VARIANTS[currentVariantIndex];
+
+      // Update switcher dock
+      document.getElementById('dockVariantBadge').textContent = `Variant ${variant.id}`;
+      document.getElementById('dockVariantName').textContent = variant.name;
+
+      // Update scenario card text
+      document.getElementById('scenarioHeading').textContent = sc.title;
+      document.getElementById('scenarioDesc').textContent = sc.desc;
+      document.getElementById('scenarioBypassTag').style.display = sc.bypass ? 'inline-flex' : 'none';
+
+      // Update scenario tab highlights
+      document.querySelectorAll('.scenario-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.scenario === String(sc.id));
+      });
+
+      // Render variant HTML
+      if (variant.id === 'A') {
+        mount.innerHTML = renderVariantA(sc);
+      } else if (variant.id === 'B') {
+        mount.innerHTML = renderVariantB(sc);
+      } else if (variant.id === 'C') {
+        mount.innerHTML = renderVariantC(sc);
+      }
+
+      renderInspector();
+      updateUrl();
+    }
+
+    // Handlers
+    function handlePlacementChange(placement) {
+      formState.schedulePlacement = placement;
+      renderDialog();
+    }
+
+    function handlePlacementQuickCurrent() {
+      formState.schedulePlacement = 'specific';
+      formState.customTime = '22:45';
+      renderDialog();
+    }
+
+    function handleTimeChange(val) {
+      formState.customTime = val;
+      renderDialog();
+    }
+
+    function handleDurationChange(choice) {
+      formState.durationChoice = choice;
+      renderDialog();
+    }
+
+    function handleCancel() {
+      formState.isCompleted = false;
+      renderInspector();
+      showToast('Action cancelled: Task remains incomplete (Esc)', 'warn');
+    }
+
+    function handleComplete() {
+      const sc = SCENARIOS[currentScenarioId];
+      const durMin = getDurationMinutes(sc, formState.durationChoice);
+      const timeStr = computeResultTime(sc, formState);
+
+      formState.isCompleted = true;
+      renderInspector();
+      showToast(`Task completed! Schedule updated: ${durMin}m duration at ${timeStr}`, 'success');
+    }
+
+    function switchVariant(direction) {
+      currentVariantIndex = (currentVariantIndex + direction + VARIANTS.length) % VARIANTS.length;
+      renderDialog();
+    }
+
+    // Event Listeners
+    document.getElementById('dockPrevBtn').addEventListener('click', () => switchVariant(-1));
+    document.getElementById('dockNextBtn').addEventListener('click', () => switchVariant(1));
+
+    // Keyboard navigation (UI.md requirement)
+    window.addEventListener('keydown', (e) => {
+      // Don't intercept when an input or textarea has focus
+      const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+      if (activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select') {
+        if (e.key === 'Enter') {
+          handleComplete();
+        } else if (e.key === 'Escape') {
+          handleCancel();
+        }
+        return;
+      }
+
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        switchVariant(-1);
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        switchVariant(1);
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        handleComplete();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        handleCancel();
+      }
+    });
+
+    // Scenario tabs click
+    document.getElementById('scenarioNav').addEventListener('click', (e) => {
+      const tab = e.target.closest('.scenario-tab');
+      if (tab) {
+        currentScenarioId = parseInt(tab.dataset.scenario, 10);
+        updateFormDefaults();
+        renderDialog();
+      }
+    });
+
+    // Reset button
+    document.getElementById('resetScenarioBtn').addEventListener('click', () => {
+      updateFormDefaults();
+      renderDialog();
+      showToast('Scenario state reset to defaults', 'success');
+    });
+
+    // Theme toggle
+    document.getElementById('themeToggleBtn').addEventListener('click', () => {
+      const body = document.body;
+      const isDark = body.classList.toggle('isDarkTheme');
+      document.getElementById('themeIcon').textContent = isDark ? 'light_mode' : 'dark_mode';
+      document.getElementById('themeText').textContent = isDark ? 'Light Theme' : 'Dark Theme';
+    });
+
+    // Initial boot
+    initFromUrl();
+    renderDialog();
+  </script>
+</body>
+</html>
