@@ -621,6 +621,14 @@
       border: 1px solid var(--separator);
     }
 
+    .pill-clue {
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--ink-muted);
+      line-height: 1.35;
+      padding: 1px 2px 0 2px;
+    }
+
     /* ------------------------------------------------------------- */
     /* VARIANT C: Visual Timeline Preview (Calendar Card)            */
     /* ------------------------------------------------------------- */
@@ -1432,7 +1440,7 @@
       // Clue for Box 2 (Duration Adjustment)
       let durationClue = '';
       if (!hasDurationChoice) {
-        durationClue = `No duration discrepancy (${sc.timeSpentStr} spent vs ${sc.timeEstimateStr} estimate). Final duration will be <strong>${sc.timeEstimate > 0 ? sc.timeEstimateStr : '15m default'}</strong>.`;
+        durationClue = `No duration discrepancy (${sc.timeSpentStr} spent vs ${sc.timeEstimateStr} estimate). Final duration will be ${sc.timeEstimate > 0 ? sc.timeEstimateStr : '15m default'}.`;
       } else if (formState.durationChoice === 'adjust') {
         durationClue = `${isOvertime ? 'Reflects overtime work on calendar' : 'Frees up unused planned calendar time'} (${sc.timeSpentStr} actual).`;
       } else {
@@ -1471,10 +1479,7 @@
                   <input type="time" value="${formState.customTime}" onchange="handleTimeChange(this.value)" onclick="event.stopPropagation(); handlePlacementChange('specific');" style="position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;">
                 </div>
               </div>
-              <div class="pill-clue">
-                <span class="material-icons clue-icon">info</span>
-                <span>${placementClue}</span>
-              </div>
+              <div class="pill-clue">${placementClue}</div>
             </div>
 
             <!-- Row 2: Duration -->
@@ -1501,10 +1506,7 @@
                   </button>
                 `}
               </div>
-              <div class="pill-clue">
-                <span class="material-icons clue-icon">info</span>
-                <span>${durationClue}</span>
-              </div>
+              <div class="pill-clue">${durationClue}</div>
             </div>
           </div>
 
