@@ -726,6 +726,47 @@
       box-sizing: border-box;
     }
 
+    /* Inline time editor within segmented pill */
+    .variant-b .pill-button.editing-time {
+      background: var(--surface-1);
+      border-color: var(--primary);
+      cursor: default;
+      gap: 6px;
+      padding: 0 6px;
+    }
+    .variant-b .inline-time-input {
+      background: var(--surface-2);
+      border: 1px solid var(--primary);
+      color: var(--ink-strong);
+      font-family: inherit;
+      font-size: 12.5px;
+      font-weight: 600;
+      text-align: center;
+      padding: 2px 6px;
+      border-radius: 4px;
+      width: 95px;
+      height: 26px;
+      outline: none;
+      box-shadow: 0 0 0 2px var(--primary-glow);
+      box-sizing: border-box;
+    }
+    .variant-b .inline-commit-btn {
+      width: 24px;
+      height: 24px;
+      background: var(--primary);
+      color: #ffffff;
+      border-radius: 3px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: var(--transition);
+    }
+    .variant-b .inline-commit-btn:hover {
+      background: var(--primary-hover);
+    }
+
     /* Super Productivity Material Dialog Actions */
     .variant-b .dialog-footer {
       padding: 12px 20px 16px 20px;
@@ -1332,7 +1373,8 @@
       schedulePlacement: 'allday', // 'allday' | 'specific'
       customTime: '10:00',
       durationChoice: 'adjust', // 'keep' | 'adjust'
-      isCompleted: false
+      isCompleted: false,
+      isEditingTime: false
     };
 
     // Helper: format duration in minutes
@@ -1409,6 +1451,7 @@
     function updateFormDefaults() {
       const sc = SCENARIOS[currentScenarioId];
       formState.isCompleted = false;
+      formState.isEditingTime = false;
       if (sc.isScheduled) {
         formState.schedulePlacement = 'specific';
         formState.customTime = sc.scheduledTime24 || '22:45';
@@ -1627,11 +1670,36 @@
                   <span class="material-icons" style="font-size: 15px;">wb_sunny</span>
                   <span>12:00 AM (All Day)</span>
                 </button>
-                <div class="pill-button ${formState.schedulePlacement === 'specific' ? 'active' : ''}" style="position: relative; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px;" onclick="handlePlacementChange('specific')">
-                  <span class="material-icons" style="font-size: 15px;">schedule</span>
-                  <span>${formatTime12h(formState.customTime)}</span>
-                  <input type="time" value="${formState.customTime}" onchange="handleTimeChange(this.value)" onclick="event.stopPropagation(); handlePlacementChange('specific');" style="position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;">
-                </div>
+                ${formState.isEditingTime && formState.schedulePlacement === 'specific' ? `
+                  <div class="pill-button active editing-time" onclick="event.stopPropagation()">
+                    <span class="material-icons" style="font-size: 15px; color: var(--primary);">schedule</span>
+                    <input
+                      id="customTimeInlineInput"
+                      type="text"
+                      class="inline-time-input"
+                      value="${formatTime12h(formState.customTime)}"
+                      onkeydown="handleInlineTimeKeydown(event)"
+                      onblur="handleInlineTimeBlur(event)"
+                      placeholder="e.g. 11 or 11:00 AM"
+                      title="Type time (e.g. 11, 11:30, 2pm) and press Enter"
+                      autocomplete="off"
+                      spellcheck="false"
+                    />
+                    <button type="button" class="inline-commit-btn" onmousedown="event.preventDefault(); commitInlineTime(document.getElementById('customTimeInlineInput').value);" title="Confirm time (Enter)">
+                      <span class="material-icons" style="font-size: 15px;">check</span>
+                    </button>
+                  </div>
+                ` : `
+                  <button
+                    type="button"
+                    class="pill-button ${formState.schedulePlacement === 'specific' ? 'active' : ''}"
+                    onclick="handleCustomTimeClick(event)"
+                    title="${formState.schedulePlacement === 'specific' ? 'Click digits to update time' : 'Select custom time'}"
+                  >
+                    <span class="material-icons" style="font-size: 15px;">schedule</span>
+                    <span class="custom-time-digits">${formatTime12h(formState.customTime)}</span>
+                  </button>
+                `}
               </div>
               <div class="pill-clue">${placementClue}</div>
             </div>
@@ -1830,8 +1898,126 @@
     }
 
     // Handlers
+    // Parser for flexible user typed custom time
+    function parseCustomTimeString(str, current24h) {
+      if (!str || typeof str !== 'string') return current24h || '22:45';
+      const raw = str.trim().toLowerCase();
+      if (!raw) return current24h || '22:45';
+
+      let currentH = 22;
+      let currentM = 45;
+      if (current24h && current24h.includes(':')) {
+        const parts = current24h.split(':');
+        currentH = parseInt(parts[0], 10) || 0;
+        currentM = parseInt(parts[1], 10) || 0;
+      }
+      const currentIsPM = currentH >= 12;
+
+      // Handle standalone 'am' or 'pm' toggle
+      if (raw === 'am' || raw === 'pm') {
+        if (raw === 'am' && currentH >= 12) currentH -= 12;
+        if (raw === 'pm' && currentH < 12) currentH += 12;
+        return `${String(currentH).padStart(2, '0')}:${String(currentM).padStart(2, '0')}`;
+      }
+
+      const isExplicitAM = raw.includes('a');
+      const isExplicitPM = raw.includes('p');
+
+      // Strip non-digit and non-colon characters
+      const clean = raw.replace(/[^0-9:]/g, '');
+      if (!clean) return current24h || '22:45';
+
+      let hours = 0;
+      let minutes = 0;
+
+      if (clean.includes(':')) {
+        const [hStr, mStr] = clean.split(':');
+        hours = parseInt(hStr, 10) || 0;
+        minutes = parseInt(mStr, 10) || 0;
+      } else {
+        const num = parseInt(clean, 10);
+        if (clean.length <= 2) {
+          hours = num;
+          minutes = 0;
+        } else if (clean.length === 3) {
+          hours = Math.floor(num / 100);
+          minutes = num % 100;
+        } else {
+          hours = Math.floor(num / 100);
+          minutes = num % 100;
+        }
+      }
+
+      // Convert 12h to 24h
+      if (isExplicitPM) {
+        if (hours < 12) hours += 12;
+        if (hours === 24) hours = 12;
+      } else if (isExplicitAM) {
+        if (hours === 12) hours = 0;
+      } else {
+        // Retain AM/PM context of current time
+        if (hours >= 1 && hours <= 12) {
+          if (currentIsPM && hours < 12) {
+            hours += 12;
+          } else if (!currentIsPM && hours === 12) {
+            hours = 0;
+          }
+        }
+      }
+
+      hours = Math.max(0, Math.min(23, hours));
+      minutes = Math.max(0, Math.min(59, minutes));
+
+      return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    }
+
+    function handleCustomTimeClick(event) {
+      if (formState.schedulePlacement !== 'specific') {
+        // 1st click on custom time button or digits: SELECT the box
+        formState.schedulePlacement = 'specific';
+        formState.isEditingTime = false;
+        renderDialog();
+      } else {
+        // 2nd click (box already selected): enter inline edit mode
+        formState.isEditingTime = true;
+        renderDialog();
+        setTimeout(() => {
+          const input = document.getElementById('customTimeInlineInput');
+          if (input) {
+            input.focus();
+            input.select();
+          }
+        }, 20);
+      }
+    }
+
+    function handleInlineTimeKeydown(event) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        event.stopPropagation();
+        commitInlineTime(event.target.value);
+      } else if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopPropagation();
+        formState.isEditingTime = false;
+        renderDialog();
+      }
+    }
+
+    function handleInlineTimeBlur(event) {
+      commitInlineTime(event.target.value);
+    }
+
+    function commitInlineTime(rawVal) {
+      const new24h = parseCustomTimeString(rawVal, formState.customTime);
+      formState.customTime = new24h;
+      formState.isEditingTime = false;
+      renderDialog();
+    }
+
     function handlePlacementChange(placement) {
       formState.schedulePlacement = placement;
+      formState.isEditingTime = false;
       renderDialog();
     }
 
