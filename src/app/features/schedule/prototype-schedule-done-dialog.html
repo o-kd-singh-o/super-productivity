@@ -727,6 +727,12 @@
     }
 
     /* Seamless inline time editor within segmented pill */
+    .variant-b .custom-time-wrap {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+    }
+
     .variant-b .inline-time-input {
       background: transparent;
       border: none;
@@ -740,8 +746,12 @@
       text-align: left;
       padding: 0;
       margin: 0;
-      width: 72px;
-      height: auto;
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      min-width: 68px;
+      height: 100%;
       box-shadow: none;
       box-sizing: border-box;
       caret-color: var(--primary);
@@ -1653,17 +1663,20 @@
                 ${formState.isEditingTime && formState.schedulePlacement === 'specific' ? `
                   <div class="pill-button active" onclick="event.stopPropagation()">
                     <span class="material-icons" style="font-size: 15px;">schedule</span>
-                    <input
-                      id="customTimeInlineInput"
-                      type="text"
-                      class="inline-time-input"
-                      value="${formatTime12h(formState.customTime)}"
-                      onkeydown="handleInlineTimeKeydown(event)"
-                      onblur="handleInlineTimeBlur(event)"
-                      placeholder="10:45 PM"
-                      autocomplete="off"
-                      spellcheck="false"
-                    />
+                    <span class="custom-time-wrap">
+                      <span class="custom-time-digits" style="visibility: hidden;">${formatTime12h(formState.customTime)}</span>
+                      <input
+                        id="customTimeInlineInput"
+                        type="text"
+                        class="inline-time-input"
+                        value="${formatTime12h(formState.customTime)}"
+                        onkeydown="handleInlineTimeKeydown(event)"
+                        onblur="handleInlineTimeBlur(event)"
+                        placeholder="${formatTime12h(formState.customTime)}"
+                        autocomplete="off"
+                        spellcheck="false"
+                      />
+                    </span>
                   </div>
                 ` : `
                   <button
@@ -1673,7 +1686,9 @@
                     title="${formState.schedulePlacement === 'specific' ? 'Click digits to update time' : 'Select custom time'}"
                   >
                     <span class="material-icons" style="font-size: 15px;">schedule</span>
-                    <span class="custom-time-digits">${formatTime12h(formState.customTime)}</span>
+                    <span class="custom-time-wrap">
+                      <span class="custom-time-digits">${formatTime12h(formState.customTime)}</span>
+                    </span>
                   </button>
                 `}
               </div>
